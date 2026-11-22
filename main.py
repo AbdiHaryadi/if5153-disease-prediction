@@ -20,6 +20,10 @@ class Session:
         self.symptom_presences = symptom_presences
 
     def make_response(self) -> Response:
+        for s, presence in self.symptom_presences.items():
+            if presence is None:
+                return AskSymptomOccurence(self, s)
+
         retriever_symptoms = [
             RetrieverSymptomInput(name=name, present=present)
             for name, present in self.symptom_presences.items()
@@ -31,7 +35,11 @@ class Session:
         for d in retriever_diseases:
             for s in d.get_symptoms():
                 if s not in self.symptom_presences:
-                    return AskSymptomOccurence(self, s)
+                    self.symptom_presences[s] = None
+
+        for s, presence in self.symptom_presences.items():
+            if presence is None:
+                return AskSymptomOccurence(self, s)
 
         return DiseasePrediction(retriever_diseases)
 
@@ -66,12 +74,13 @@ class App:
         retriever_diseases = self.retriever.retrieve_diseases_from_text(
             complaint
         )
+        symptom_presences: dict[str, bool | None] = {}
         for d in retriever_diseases:
             for s in d.get_symptoms():
-                new_session = Session(self.retriever, {})
-                return AskSymptomOccurence(new_session, s)
+                if s not in symptom_presences:
+                    symptom_presences[s] = None
 
-        return DiseasePrediction(retriever_diseases)
+        return Session(self.retriever, symptom_presences).make_response()
 
 if __name__ == "__main__":
     doc_df = load_doc_df(os.environ["DATA_PATH"])
