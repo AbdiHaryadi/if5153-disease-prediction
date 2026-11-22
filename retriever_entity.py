@@ -5,8 +5,8 @@ import re
 import numpy as np
 import pandas as pd
 
-from retriever_generic import RetrieveProcess, RetrieverQueryState
-from utils import doc_df_to_docs, load_doc_df, tokenize
+from retriever_generic import RetrieveProcess, RetrieverQuery
+from utils import doc_df_to_docs, tokenize
 
 GENERIC_NAME_WORDS = {'penyakit', 'sindrom', 'gangguan', 'infeksi', 'kanker', 'tumor', 'radang', 'pada', 'anak', 'bayi'}
 
@@ -86,8 +86,10 @@ def present_symptoms(state):
 def absent_symptoms(state):
     return [s['name'] for s in state.get('symptoms', []) if not s.get('present')]
 
-def query_entities(case: RetrieverQueryState):
-    return present_symptoms(case.to_dict()), absent_symptoms(case.to_dict())
+def query_entities(case):
+    if case['state']:
+        return present_symptoms(case['state']), absent_symptoms(case['state'])
+    return extract_phrases(case['text']), []
 
 def to_token_sets(phrases):
     return [s for s in (frozenset(tokenize(p)) for p in phrases) if s]
@@ -105,10 +107,10 @@ class EntityBasedRetrieveProcess(RetrieveProcess):
         self.doc_ent = [to_token_sets(load_entities(entity_path)) for i in range(len(doc_df))]
         self.absent_penalty = 0.5
 
-    def __call__(self, query_state_list: list[RetrieverQueryState]):
-        S = np.zeros((len(query_state_list), len(self.docs)))
-        for qi, case_ in enumerate(query_state_list):
-            present, absent = query_entities(case_)
+    def __call__(self, query_list: list[RetrieverQuery]):
+        S = np.zeros((len(query_list), len(self.docs)))
+        for qi, case_ in enumerate(query_list):
+            present, absent = query_entities(case_.to_dict())
             P, A = to_token_sets(present), to_token_sets(absent)
             for j, D in enumerate(self.doc_ent):
                 if D and P:

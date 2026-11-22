@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 import torch
 from transformers import MarianMTModel, MarianTokenizer
 
-from retriever_generic import RetrieveProcess, RetrieverQueryState
+from retriever_generic import RetrieveProcess, RetrieverQuery
 from utils import doc_df_to_docs
 
 @dataclass
@@ -74,18 +74,18 @@ class EmbeddingBasedRetrieveProcess(RetrieveProcess):
 
         return texts
 
-    def query_state_list_to_text_list(self, query_state_list: list[RetrieverQueryState]):
-        texts = [q.to_text() for q in query_state_list]
+    def query_list_to_text_list(self, query_list: list[RetrieverQuery]):
+        texts = [q.text for q in query_list]
         return self.translate_if_needed(texts)
 
-    def __call__(self, query_state_list: list[RetrieverQueryState]):
+    def __call__(self, query_list: list[RetrieverQuery]):
         kw = dict(
             batch_size=self.batch_size,
             normalize_embeddings=True,
             convert_to_numpy=True,
             show_progress_bar=True
         )
-        query_texts = self.query_state_list_to_text_list(query_state_list)
+        query_texts = self.query_list_to_text_list(query_list)
         q = self.model.encode([self.config.q_prefix + t for t in query_texts], **kw)  # type: ignore
         d = self.model.encode([self.config.d_prefix + t for t in self.doc_texts], **kw)  # type: ignore
         return q @ d.T   # cosine similarity, since vectors are normalised

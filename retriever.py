@@ -5,7 +5,7 @@ from retriever_bm25 import BM25RetrieveProcess
 from retriever_embed import EmbeddingBasedRetrieveProcess, EmbeddingModelConfig
 from retriever_entity import EntityBasedRetrieveProcess
 from retriever_fusion import FusionRetrieveProcess
-from retriever_generic import RetrieverSymptomState, RetrieverQueryState
+from retriever_generic import RetrieverQuery, RetrieverSymptomState
 
 RetrieverSymptomInput = RetrieverSymptomState
 
@@ -41,8 +41,8 @@ class Retriever:
 
     def retrieve_diseases(self, symptoms: list[RetrieverSymptomState]) -> list[RetrieverDisease]:
         # Originally from Nihal
-        query_states_list = [RetrieverQueryState(symptoms)]
-        S = self.process(query_states_list)
+        query_list = [RetrieverQuery.from_symptom_states(symptoms)]
+        S = self.process(query_list)
         top3 = np.argsort(-S, axis=1)[:, :3]
 
         df = self.doc_df

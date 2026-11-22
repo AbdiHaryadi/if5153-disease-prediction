@@ -3,7 +3,7 @@ from typing import Any
 
 import numpy as np
 
-from retriever_generic import RetrieveProcess, RetrieverQueryState
+from retriever_generic import RetrieveProcess, RetrieverQuery
 
 
 def minmax(S):
@@ -19,8 +19,8 @@ class FusionRetrieveProcess(RetrieveProcess):
         self.processes = processes
         self.weights = weights
 
-    def __call__(self, query_state_list: list[RetrieverQueryState]) -> Any:
-        all_scores = [p(query_state_list) for p in self.processes]
+    def __call__(self, query_list: list[RetrieverQuery]) -> Any:
+        all_scores = [p(query_list) for p in self.processes]
         normalized_scores = [minmax(scores) for scores in all_scores]
         return sum(w * scores for scores, w in zip(normalized_scores,
                                                    self.weights, strict=True))

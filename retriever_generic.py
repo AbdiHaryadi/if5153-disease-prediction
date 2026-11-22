@@ -38,13 +38,35 @@ def serialize(state, template=0):
 @dataclass
 class RetrieverQueryState:
     symptoms: list[RetrieverSymptomState]
+    def to_dict(self):
+        if self.symptoms:
+            return {"symptoms": [s.to_dict() for s in self.symptoms]}
+        else:
+            return {}
 
-    def to_text(self):
-        return serialize(self.to_dict())
+@dataclass
+class RetrieverQuery:
+    state: RetrieverQueryState
+    text: str
 
     def to_dict(self):
-        return {"symptoms": [s.to_dict() for s in self.symptoms]}
+        return {
+            "state": self.state.to_dict(),
+            "text": self.text
+        }
+
+    @classmethod
+    def from_symptom_states(cls, symptom_states: list[RetrieverSymptomState]):
+        state = RetrieverQueryState(symptoms=symptom_states)
+        return cls(
+            state=state,
+            text=serialize(state.to_dict()),
+        )
+
+    @classmethod
+    def from_text(cls, text: str):
+        return cls(state=RetrieverQueryState([]), text=text)
 
 class RetrieveProcess:
-    def __call__(self, query_state_list: list[RetrieverQueryState]) -> Any:
+    def __call__(self, query_list: list[RetrieverQuery]) -> Any:
         raise NotImplementedError
