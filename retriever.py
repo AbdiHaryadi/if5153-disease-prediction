@@ -1,16 +1,13 @@
-from dataclasses import dataclass
-
+import numpy as np
 import pandas as pd
 
 from retriever_bm25 import BM25RetrieveProcess
 from retriever_embed import EmbeddingBasedRetrieveProcess, EmbeddingModelConfig
 from retriever_entity import EntityBasedRetrieveProcess
 from retriever_fusion import FusionRetrieveProcess
+from retriever_generic import RetrieverSymptomState, RetrieverQueryState
 
-@dataclass
-class RetrieverSymptomInput:
-    name: str
-    present: bool
+RetrieverSymptomInput = RetrieverSymptomState
 
 class RetrieverDisease:
     def __init__(self, name: str):
@@ -40,35 +37,15 @@ class Retriever:
             weights=[0.3, 0.4, 0.3]
         )
 
-    def retrieve_diseases(self, symptoms: list[RetrieverSymptomInput]) -> list[RetrieverDisease]:
-        raise NotImplementedError("Not done yet")
-        # scores = self.process(symptoms)
-        S = SCORES[split][method]
+        self.doc_df = doc_df
+
+    def retrieve_diseases(self, symptoms: list[RetrieverSymptomState]) -> list[RetrieverDisease]:
+        # Originally from Nihal
+        query_states_list = [RetrieverQueryState(symptoms)]
+        S = self.process(query_states_list)
         top3 = np.argsort(-S, axis=1)[:, :3]
-        rows = [{'query': q['text'], 'correct': df.loc[g, 'name'], 'top3': [df.loc[j, 'name'] for j in t]}
-                for q, t, g in zip(splits[split], top3, GOLD[split]) if t[0] != g]
-        print(len(rows), 'of', len(S), 'queries wrong at top-1 for', method)
-        return pd.DataFrame(rows).head(n)
-        return []
 
-# class FusionRetrieveProcess:
-#     def __init__(
-#             self,
-#             doc_df: pd.DataFrame,
-#             embedding_model_config: EmbeddingModelConfig,
-#             entity_path: str,
-#             weights,
-#     ):
-#         self.bm25_process = BM25RetrieveProcess(doc_df)
-#         self.embed_process = EmbeddingBasedRetrieveProcess(doc_df, embedding_model_config)
-#         self.entity_process = EntityBasedRetrieveProcess(doc_df, entity_path)
-#         self.weights = weights
-
-#     def __call__(self, query_texts: list[str]) -> float:
-#         all_scores = [
-#             self.bm25_process(query_texts),
-#             self.embed_process(query_texts),
-#             self.entity_process(query_texts),
-#         ]
-#         normalized_scores = [minmax(scores) for scores in all_scores]
-#         return sum(w * scores for scores, w in zip(normalized_scores, self.weights))
+        df = self.doc_df
+        top3 = [str(df.loc[j, 'name']) for j in top3[0]]
+        diseases = [RetrieverDisease(str(df.loc[j, 'name'])) for j in top3[0]]
+        return diseases
