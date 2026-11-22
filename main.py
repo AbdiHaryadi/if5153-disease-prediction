@@ -47,9 +47,12 @@ class DiseasePrediction(Response):
 class App:
     def __init__(self):
         self.ner = NER()
+
+        raise NotImplementedError("Retriever is not yet initialized properly")
         self.retriever = Retriever()
 
     def tell(self, complaint: str) -> Response:
+        raise NotImplementedError
         symptoms: list[str] = self.ner.extract_symptom_entities(complaint)
         retriever_symptoms = [
             RetrieverSymptomInput(name=s, present=True)
