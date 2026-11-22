@@ -39,9 +39,12 @@ class Retriever:
 
         self.doc_df = doc_df
 
-    def retrieve_diseases(self, symptoms: list[RetrieverSymptomState]) -> list[RetrieverDisease]:
-        # Originally from Nihal
+    def retrieve_diseases_from_symptoms(self, symptoms: list[RetrieverSymptomState]) -> list[RetrieverDisease]:
         query_list = [RetrieverQuery.from_symptom_states(symptoms)]
+        return self._retrieve_diseases(query_list)
+
+    def _retrieve_diseases(self, query_list: list[RetrieverQuery]) -> list[RetrieverDisease]:
+        # Originally from Nihal
         S = self.process(query_list)
         top3 = np.argsort(-S, axis=1)[:, :3]
 
@@ -49,3 +52,7 @@ class Retriever:
         top3 = [str(df.loc[j, 'name']) for j in top3[0]]
         diseases = [RetrieverDisease(str(df.loc[j, 'name'])) for j in top3[0]]
         return diseases
+
+    def retrieve_diseases_from_text(self, text: str) -> list[RetrieverDisease]:
+        query_list = [RetrieverQuery.from_text(text)]
+        return self._retrieve_diseases(query_list)

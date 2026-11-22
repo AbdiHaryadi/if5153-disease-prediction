@@ -14,7 +14,7 @@ class Session:
     def __init__(
             self,
             retriever: Retriever,
-            symptom_presences: dict[str, bool],
+            symptom_presences: dict[str, bool | None],
     ):
         self.retriever = retriever
         self.symptom_presences = symptom_presences
@@ -23,8 +23,9 @@ class Session:
         retriever_symptoms = [
             RetrieverSymptomInput(name=name, present=present)
             for name, present in self.symptom_presences.items()
+            if present is not None
         ]
-        retriever_diseases = self.retriever.retrieve_diseases(
+        retriever_diseases = self.retriever.retrieve_diseases_from_symptoms(
             retriever_symptoms
         )
         for d in retriever_diseases:
@@ -59,17 +60,18 @@ class DiseasePrediction(Response):
 
 class App:
     def __init__(self, doc_df: pd.DataFrame, entity_path: str):
-        self.ner = NER()
         self.retriever = Retriever(doc_df, entity_path)
 
     def tell(self, complaint: str) -> Response:
-        symptoms: list[str] = self.ner.extract_symptom_entities(complaint)
-        return Session(
-            retriever=self.retriever,
-            symptom_presences={
-                s: True for s in symptoms
-            }
-        ).make_response()
+        retriever_diseases = self.retriever.retrieve_diseases_from_text(
+            complaint
+        )
+        for d in retriever_diseases:
+            for s in d.get_symptoms():
+                new_session = Session(self.retriever, {})
+                return AskSymptomOccurence(new_session, s)
+
+        return DiseasePrediction(retriever_diseases)
 
 if __name__ == "__main__":
     doc_df = load_doc_df(os.environ["DATA_PATH"])
