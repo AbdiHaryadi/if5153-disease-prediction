@@ -13,18 +13,26 @@ class Response:
 class Session:
     def __init__(
             self,
-            possible_diseases: list[RetrieverDisease],
-            symptom_presences: dict[str, bool | None],
+            retriever: Retriever,
+            symptom_presences: dict[str, bool],
     ):
-        self.possible_diseases = possible_diseases
+        self.retriever = retriever
         self.symptom_presences = symptom_presences
 
     def make_response(self) -> Response:
-        for symptom, presence in self.symptom_presences.items():
-            if presence is None:
-                return AskSymptomOccurence(self, symptom)
+        retriever_symptoms = [
+            RetrieverSymptomInput(name=name, present=present)
+            for name, present in self.symptom_presences.items()
+        ]
+        retriever_diseases = self.retriever.retrieve_diseases(
+            retriever_symptoms
+        )
+        for d in retriever_diseases:
+            for s in d.get_symptoms():
+                if s not in self.symptom_presences:
+                    return AskSymptomOccurence(self, s)
 
-        return DiseasePrediction(self.possible_diseases)
+        return DiseasePrediction(retriever_diseases)
 
 class AskSymptomOccurence(Response):
     def __init__(self, session: Session, asked_symptom: str):
@@ -56,24 +64,11 @@ class App:
 
     def tell(self, complaint: str) -> Response:
         symptoms: list[str] = self.ner.extract_symptom_entities(complaint)
-        retriever_symptoms = [
-            RetrieverSymptomInput(name=s, present=True)
-            for s in symptoms
-        ]
-        retriever_diseases = self.retriever.retrieve_diseases(
-            retriever_symptoms
-        )
-        symptom_presences: dict[str, bool | None] = {
-            rs.name: rs.present for rs in retriever_symptoms
-        }
-        for d in retriever_diseases:
-            for s in d.get_symptoms():
-                if s not in symptom_presences:
-                    symptom_presences[s] = None
-        
         return Session(
-            possible_diseases=retriever_diseases,
-            symptom_presences=symptom_presences
+            retriever=self.retriever,
+            symptom_presences={
+                s: True for s in symptoms
+            }
         ).make_response()
 
 if __name__ == "__main__":
