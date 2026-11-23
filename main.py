@@ -4,7 +4,7 @@ import pandas as pd
 
 from ner import NER
 from retriever import Retriever, RetrieverDisease, RetrieverSymptomInput
-from utils import load_doc_df
+from utils import load_doc_df, load_entities_dict
 
 class Response:
     def handle(self) -> Response | None:
@@ -67,8 +67,8 @@ class DiseasePrediction(Response):
             print(f"- {d.name}")
 
 class App:
-    def __init__(self, doc_df: pd.DataFrame, entity_path: str, use_ner: bool = True):
-        self.retriever = Retriever(doc_df, entity_path)
+    def __init__(self, doc_df: pd.DataFrame, entities: dict, use_ner: bool = True):
+        self.retriever = Retriever(doc_df, entities)
         self.ner = NER() if use_ner else None
 
     def tell(self, complaint: str) -> Response:
@@ -100,8 +100,8 @@ class App:
 
 if __name__ == "__main__":
     doc_df = load_doc_df(os.environ["DATA_PATH"])
-    entity_path = os.environ["ENTITY_PATH"]
-    app = App(doc_df, entity_path, use_ner=False)
+    entities = load_entities_dict(os.environ["ENTITY_PATH"])
+    app = App(doc_df, entities, use_ner=False)
     complaint = input("Masukkan komplain: ")
     response = app.tell(complaint)
     while response is not None:

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from retriever_generic import RetrieveProcess, RetrieverQuery
-from utils import doc_df_to_docs, tokenize
+from utils import doc_df_to_docs, get_symptoms_from_entities_dict, tokenize
 
 GENERIC_NAME_WORDS = {'penyakit', 'sindrom', 'gangguan', 'infeksi', 'kanker', 'tumor', 'radang', 'pada', 'anak', 'bayi'}
 
@@ -99,12 +99,12 @@ def hits(query_sets, doc_sets):
     return sum(any(len(q & d) / min(len(q), len(d)) >= MATCH_THRESHOLD for d in doc_sets) for q in query_sets)
 
 class EntityBasedRetrieveProcess(RetrieveProcess):
-    def __init__(self, doc_df: pd.DataFrame, entity_path: str):
-        E = {k.lower(): v for k, v in json.load(open(entity_path, encoding='utf-8')).items()}
-        load_entities = lambda i: E.get(doc_df.loc[i, 'name'].lower(), {}).get('SYMPTOM', [])
-
+    def __init__(self, doc_df: pd.DataFrame, entities: dict):
         self.docs = doc_df_to_docs(doc_df)
-        self.doc_ent = [to_token_sets(load_entities(i)) for i in range(len(doc_df))]
+        self.doc_ent = [
+            to_token_sets(get_symptoms_from_entities_dict(entities, str(doc_df.loc[i, 'name'])))
+            for i in range(len(doc_df))
+        ]
         self.absent_penalty = 0.5
 
     def __call__(self, query_list: list[RetrieverQuery]):

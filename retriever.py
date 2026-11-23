@@ -6,18 +6,20 @@ from retriever_embed import EmbeddingBasedRetrieveProcess, EmbeddingModelConfig
 from retriever_entity import EntityBasedRetrieveProcess
 from retriever_fusion import FusionRetrieveProcess
 from retriever_generic import RetrieverQuery, RetrieverSymptomState
+from utils import get_symptoms_from_entities_dict
 
 RetrieverSymptomInput = RetrieverSymptomState
 
 class RetrieverDisease:
-    def __init__(self, name: str):
+    def __init__(self, name: str, symptoms: list[str]):
         self.name = name
+        self.symptoms = symptoms
 
     def get_symptoms(self) -> list[str]:
-        return []
+        return self.symptoms
 
 class Retriever:
-    def __init__(self, doc_df: pd.DataFrame, entity_path: str):
+    def __init__(self, doc_df: pd.DataFrame, entities: dict):
         # Used process: Fusion
         # Use the best result from Nihal
         self.process = FusionRetrieveProcess(
@@ -32,12 +34,13 @@ class Retriever:
                         d_prefix="passage: "
                     )
                 ),
-                EntityBasedRetrieveProcess(doc_df, entity_path)
+                EntityBasedRetrieveProcess(doc_df, entities)
             ],
             weights=[0.3, 0.4, 0.3]
         )
 
         self.doc_df = doc_df
+        self.entities = entities
 
     def retrieve_diseases_from_symptoms(self, symptoms: list[RetrieverSymptomState]) -> list[RetrieverDisease]:
         query_list = [RetrieverQuery.from_symptom_states(symptoms)]
@@ -50,8 +53,11 @@ class Retriever:
 
         df = self.doc_df
         top3 = [str(df.loc[j, 'name']) for j in top3[0]]
-        diseases = [RetrieverDisease(name) for name in top3]
+        diseases = [RetrieverDisease(name, self.get_symptoms(name)) for name in top3]
         return diseases
+
+    def get_symptoms(self, disease_name: str):
+        return get_symptoms_from_entities_dict(self.entities, disease_name)
 
     def retrieve_diseases_from_text(self, text: str) -> list[RetrieverDisease]:
         query_list = [RetrieverQuery.from_text(text)]

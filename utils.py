@@ -1,3 +1,4 @@
+import json
 import re
 
 import pandas as pd
@@ -10,6 +11,7 @@ def tokenize(text):
     return [t for t in re.findall(r'\w+', text.lower()) if t not in STOPWORDS and len(t) > 1]
 
 def load_doc_df(path: str, corpus = 'all'):
+    # Originally from Nihal's part
     df = pd.read_csv(path).fillna('')
     df['has_symptoms'] = df['has_symptoms'].astype(str).str.lower().eq('true')
     if corpus == 'with_symptoms':
@@ -27,3 +29,10 @@ def load_doc_df(path: str, corpus = 'all'):
 
 def doc_df_to_docs(df: pd.DataFrame):
     return df['doc_text'].tolist()
+
+def load_entities_dict(path: str):
+    # Originally from Nihal's part
+    return {k.lower(): v for k, v in json.load(open(path, encoding='utf-8')).items()}
+
+def get_symptoms_from_entities_dict(entities: dict, disease_name: str) -> list[str]:
+    return entities.get(disease_name.lower(), {}).get('SYMPTOM', [])
