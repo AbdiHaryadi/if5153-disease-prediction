@@ -104,7 +104,7 @@ class EntityBasedRetrieveProcess(RetrieveProcess):
         load_entities = lambda i: E.get(doc_df.loc[i, 'name'].lower(), {}).get('SYMPTOM', [])
 
         self.docs = doc_df_to_docs(doc_df)
-        self.doc_ent = [to_token_sets(load_entities(entity_path)) for i in range(len(doc_df))]
+        self.doc_ent = [to_token_sets(load_entities(i)) for i in range(len(doc_df))]
         self.absent_penalty = 0.5
 
     def __call__(self, query_list: list[RetrieverQuery]):
