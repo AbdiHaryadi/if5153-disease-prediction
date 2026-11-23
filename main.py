@@ -67,10 +67,19 @@ class DiseasePrediction(Response):
             print(f"- {d.name}")
 
 class App:
-    def __init__(self, doc_df: pd.DataFrame, entity_path: str):
+    def __init__(self, doc_df: pd.DataFrame, entity_path: str, use_ner: bool = True):
         self.retriever = Retriever(doc_df, entity_path)
+        self.ner = NER() if use_ner else None
 
     def tell(self, complaint: str) -> Response:
+        symptom_presences: dict[str, bool | None] = {}
+        if self.ner is None:
+            symptom_presences = self.init_symptom_presences_with_retriever(complaint)
+        else:
+            symptom_presences = self.init_symptom_presences_with_ner(complaint)
+        return Session(self.retriever, symptom_presences).make_response()
+
+    def init_symptom_presences_with_retriever(self, complaint: str):
         retriever_diseases = self.retriever.retrieve_diseases_from_text(
             complaint
         )
@@ -79,13 +88,20 @@ class App:
             for s in d.get_symptoms():
                 if s not in symptom_presences:
                     symptom_presences[s] = None
+        return symptom_presences
 
-        return Session(self.retriever, symptom_presences).make_response()
+    def init_symptom_presences_with_ner(self, complaint: str):
+        assert self.ner is not None
+        symptoms: list[str] = self.ner.extract_symptom_entities(complaint)
+        symptom_presences: dict[str, bool | None] = {}
+        for s in symptoms:
+            symptom_presences[s] = True
+        return symptom_presences
 
 if __name__ == "__main__":
     doc_df = load_doc_df(os.environ["DATA_PATH"])
     entity_path = os.environ["ENTITY_PATH"]
-    app = App(doc_df, entity_path)
+    app = App(doc_df, entity_path, use_ner=False)
     complaint = input("Masukkan komplain: ")
     response = app.tell(complaint)
     while response is not None:
