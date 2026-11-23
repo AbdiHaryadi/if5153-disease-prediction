@@ -47,5 +47,5 @@ class Retriever:
 
         df = self.doc_df
         top3 = [str(df.loc[j, 'name']) for j in top3[0]]
-        diseases = [RetrieverDisease(str(df.loc[j, 'name'])) for j in top3[0]]
+        diseases = [RetrieverDisease(name) for name in top3]
         return diseases
