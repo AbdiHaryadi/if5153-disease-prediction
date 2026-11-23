@@ -51,7 +51,7 @@ class AskSymptomOccurence(Response):
     def handle(self) -> Response | None:
         occured_input = ""
         while occured_input != "y" and occured_input != "t":
-            occured_input = input(f"{self.asked_symptom}? (y/t)")
+            occured_input = input(f"{self.asked_symptom}? (y/t) ")
         occured = occured_input == "y"
 
         self.session.symptom_presences[self.asked_symptom] = occured
